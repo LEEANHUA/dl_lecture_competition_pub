@@ -364,12 +364,22 @@ def main():
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
     # dataloader / model
-    transform = transforms.Compose([
-        transforms.Resize((224, 224)),
-        transforms.ToTensor()
-    ])
-    train_dataset = VQADataset(df_path="./data/train.json", image_dir="./data/train", transform=transform)
-    test_dataset = VQADataset(df_path="./data/valid.json", image_dir="./data/valid", transform=transform, answer=False)
+    transform = {
+        'train': transforms.Compose([
+            transforms.Resize((224, 224)),
+            transforms.RandomHorizontalFlip(), # 1/2で左右反転
+            transforms.ToTensor(),
+            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]), # 正規化
+            transforms.RandomErasing(p=0.8, scale=(0.02, 0.33), ratio=(0.3, 3.3)), # ランダムにマスク
+        ]),
+        'test': transforms.Compose([
+            transforms.Resize((224, 224)),
+            transforms.ToTensor(),
+            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]), # 正規化
+        ])
+    }
+    train_dataset = VQADataset(df_path="./data/train.json", image_dir="./data/train", transform=transform['train'])
+    test_dataset = VQADataset(df_path="./data/valid.json", image_dir="./data/valid", transform=transform['test'], answer=False)
     test_dataset.update_dict(train_dataset)
 
     train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=128, shuffle=True)
