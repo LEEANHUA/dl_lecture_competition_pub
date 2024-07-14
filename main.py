@@ -286,15 +286,27 @@ def ResNet18():
 def ResNet50():
     return ResNet(BottleneckBlock, [3, 4, 6, 3])
 
+def ResNet18_feature_extractor():
+    model = ResNet18()
+    # ResNet18の最後の全結合層を削除し、特徴量抽出器として利用する
+    model.fc = nn.Identity()
+    return model
+
+def ResNet50_feature_extractor():
+    model = ResNet50()
+    # ResNet50の最後の全結合層を削除し、特徴量抽出器として利用する
+    model.fc = nn.Identity()
+    return model
 
 class VQAModel(nn.Module):
     def __init__(self, vocab_size: int, n_answer: int):
         super().__init__()
-        self.resnet = ResNet18()
+        self.resnet = ResNet18_feature_extractor()
         self.text_encoder = nn.Linear(vocab_size, 512)
-
+        
         self.fc = nn.Sequential(
-            nn.Linear(1024, 512),
+            nn.LayerNorm(512 + 512),
+            nn.Linear(512 + 512, 512),
             nn.ReLU(inplace=True),
             nn.Linear(512, n_answer)
         )
