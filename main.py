@@ -9,7 +9,10 @@ import pandas
 import torch
 import torch.nn as nn
 import torchvision
-from torchvision import transforms
+from torchvision import transforms, models
+
+import os
+from transformers import AutoTokenizer, AutoModel, AutoImageProcessor
 
 
 def set_seed(seed):
@@ -301,13 +304,15 @@ def ResNet50_feature_extractor():
 class VQAModel(nn.Module):
     def __init__(self, vocab_size: int, n_answer: int):
         super().__init__()
-        self.resnet = ResNet18_feature_extractor()
+        self.resnet = models.resnet50(pretrained=True)
+        self.resnet.fc = nn.Identity()
         self.text_encoder = nn.Linear(vocab_size, 512)
         
         self.fc = nn.Sequential(
-            nn.LayerNorm(512 + 512),
-            nn.Linear(512 + 512, 512),
+            nn.LayerNorm(512 * 4 + 512),
+            nn.Linear(512 * 4 + 512, 512),
             nn.ReLU(inplace=True),
+            nn.Dropout(0.5),
             nn.Linear(512, n_answer)
         )
 
@@ -400,7 +405,7 @@ def main():
     model = VQAModel(vocab_size=len(train_dataset.question2idx)+1, n_answer=len(train_dataset.answer2idx)).to(device)
 
     # optimizer / criterion
-    num_epoch = 20
+    num_epoch = 50
     criterion = nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=0.001, weight_decay=1e-5)
 
